@@ -1,0 +1,38 @@
+name: flutter_wukongim_sdk
+description: "A new Flutter project."
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: ^3.10.1
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+  path: ^1.9.1
+  encrypt: ^5.0.3
+  cupertino_icons: ^1.0.8
+  x25519: ^0.1.1
+  hex: ^0.2.0
+  crypto: ^3.0.7
+  uuid: ^4.5.2
+  web_socket_channel: ^3.0.3
+  dio: ^5.9.0
+  shared_preferences: ^2.5.4
+  sqflite: ^2.4.2
+  connectivity_plus: ^7.0.0
+
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
