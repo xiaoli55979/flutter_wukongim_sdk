@@ -37,13 +37,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  plugin:
-    platforms:
-      android:
-        package: com.wukongim.flutter_wukongim_sdk
-        pluginClass: FlutterWukongimSdkPlugin
-      ios:
-        pluginClass: FlutterWukongimSdkPlugin
 
 topics:
   - messaging
