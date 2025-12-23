@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2025-12-23
+
+### Changed
+- Updated project structure and code organization
+- Improved example applications with better error handling
+- Enhanced debugging tools and connection diagnostics
+- Refined documentation and setup instructions
+
+### Fixed
+- Code formatting and analysis issues
+- Example project compilation errors
+- Asset configuration and database initialization
+
+### Added
+- Debug example with detailed connection analysis
+- Connection troubleshooting guide
+- Improved error messages and logging
+
 ## [0.0.1] - 2025-12-23
 
 ### Added
