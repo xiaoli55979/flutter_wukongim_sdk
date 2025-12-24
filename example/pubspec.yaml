@@ -47,3 +47,7 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Include assets from the flutter_wukongim_sdk package
+  assets:
+    - packages/flutter_wukongim_sdk/assets/
