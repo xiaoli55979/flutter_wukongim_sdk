@@ -1,13 +1,13 @@
 name: flutter_wukongim_sdk
 description: A Flutter plugin for WuKongIM instant messaging system. Provides real-time messaging, channel management, and connection handling with end-to-end encryption support.
-version: 0.0.4
+version: 0.0.5
 homepage: https://github.com/xiaoli55979/flutter_wukongim_sdk
 repository: https://github.com/xiaoli55979/flutter_wukongim_sdk
 issue_tracker: https://github.com/xiaoli55979/flutter_wukongim_sdk/issues
 documentation: https://github.com/xiaoli55979/flutter_wukongim_sdk/blob/main/README.md
 
 environment:
-  sdk: ^3.10.1
+  sdk: '>=3.1.3 <4.0.0'
   flutter: '>=3.3.0'
 
 dependencies:

@@ -1,8 +1,9 @@
-// 主要示例
-export 'main.dart';
+/// Example Plugin
+///
+/// Demonstrates how to use the flutter_wukongim_sdk plugin.
 
-// 基础示例
+// .
 export 'basic_example.dart';
-
-// 简单示例
+export 'debug_example.dart';
+export 'main.dart';
 export 'simple_example.dart';
