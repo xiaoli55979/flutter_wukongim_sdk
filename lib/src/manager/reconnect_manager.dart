@@ -47,6 +47,15 @@ class ReconnectManager {
       return;
     }
 
+    // 检查是否已登出（uid/token为空），如果是则不启动重连
+    if (WKIM.shared.options.uid == null ||
+        WKIM.shared.options.uid == "" ||
+        WKIM.shared.options.token == null ||
+        WKIM.shared.options.token == "") {
+      Logs.connection('检测到uid或token为空，可能是登出状态，不启动重连');
+      return;
+    }
+
     final config = WKIM.shared.options.networkConfig;
 
     // 如果有多个地址，减少单个地址的重试次数
@@ -78,6 +87,17 @@ class ReconnectManager {
     if (!_isNetworkAvailable) {
       Logs.connection('网络不可用，暂停重连');
       _isReconnecting = false;
+      return;
+    }
+
+    // 检查是否已登出（uid/token为空），如果是则停止重连
+    if (WKIM.shared.options.uid == null ||
+        WKIM.shared.options.uid == "" ||
+        WKIM.shared.options.token == null ||
+        WKIM.shared.options.token == "") {
+      Logs.connection('检测到uid或token为空，可能是登出状态，停止重连');
+      _isReconnecting = false;
+      _currentRetryCount = 0;
       return;
     }
 
@@ -222,6 +242,15 @@ class ReconnectManager {
 
   /// 连接失败回调
   void onConnectFailed() {
+    // 检查是否已登出（uid/token为空），如果是则不启动重连
+    if (WKIM.shared.options.uid == null ||
+        WKIM.shared.options.uid == "" ||
+        WKIM.shared.options.token == null ||
+        WKIM.shared.options.token == "") {
+      Logs.connection('检测到uid或token为空，可能是登出状态，不启动重连');
+      return;
+    }
+
     if (!_isReconnecting) {
       startReconnect();
     }
@@ -303,6 +332,15 @@ class ReconnectManager {
 
         if (isNetworkAvailable) {
           Logs.connection('网络已恢复');
+
+          // 检查是否已登出（uid/token为空），如果是则不启动重连
+          if (WKIM.shared.options.uid == null ||
+              WKIM.shared.options.uid == "" ||
+              WKIM.shared.options.token == null ||
+              WKIM.shared.options.token == "") {
+            Logs.connection('检测到uid或token为空，可能是登出状态，跳过网络恢复重连');
+            return;
+          }
 
           // 检查当前连接状态，如果已经连接成功就不要重连
           if (!WKIM.shared.connectionManager.isDisconnection) {
