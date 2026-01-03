@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2026-01-03
+### Fixed
+- Fixed database upgrade issue when table already exists
+- Fixed database upgrade issue when table doesn't exist before ALTER TABLE
+- Improved ALTER TABLE handling: automatically create missing tables from base version
+- Enhanced CREATE TABLE and CREATE INDEX statements with IF NOT EXISTS
+- Fixed reconnection issue after logout (uid/token check)
+- Added comprehensive error handling for database migration
+
+### Changed
+- Database upgrade now automatically creates missing tables from base version before executing ALTER TABLE
+- Reconnect manager now checks uid/token before attempting reconnection
+- Improved SQL statement normalization for CREATE and ALTER operations
+
 ## [0.0.4] - 2025-12-24
 ### Fixed
 - Fixed asset loading issue for sql.txt file in package configuration
