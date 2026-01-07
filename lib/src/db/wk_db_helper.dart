@@ -11,6 +11,7 @@ class WKDBHelper {
   static WKDBHelper get shared => _instance;
   final dbVersion = 1;
   Database? _database;
+  bool _isClosing = false;
   Future<bool> init() async {
     var databasesPath = await getDatabasesPath();
     String path = p.join(databasesPath, 'wk_${WKIM.shared.options.uid}.db');
@@ -249,14 +250,36 @@ class WKDBHelper {
   }
 
   Database? getDB() {
+    // 如果数据库正在关闭或已关闭，返回 null
+    if (_isClosing || _database == null) {
+      return null;
+    }
     return _database;
   }
 
-  close() {
+  /// 检查数据库是否可用
+  bool get isDatabaseAvailable => !_isClosing && _database != null;
+
+  Future<void> close() async {
+    if (_database == null || _isClosing) {
+      return;
+    }
+
+    _isClosing = true;
+
+    // 等待一小段时间，让正在进行的操作完成
+    await Future.delayed(const Duration(milliseconds: 300));
+
     if (_database != null) {
-      _database!.close();
+      try {
+        await _database!.close();
+      } catch (e) {
+        print('关闭数据库时出错: $e');
+      }
       _database = null;
     }
+
+    _isClosing = false;
   }
 
   /// 规范化 CREATE 语句（TABLE 和 INDEX），添加 IF NOT EXISTS

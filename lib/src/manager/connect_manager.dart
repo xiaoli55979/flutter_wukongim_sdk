@@ -264,9 +264,10 @@ class WKConnectionManager {
       // 安全地更新消息状态（不等待完成，避免阻塞）
       _updateSendingMsgFailSafely();
 
-      // 延迟关闭数据库，给更新操作一些时间
-      Timer(const Duration(milliseconds: 200), () {
-        WKDBHelper.shared.close();
+      // 异步关闭数据库，等待正在进行的操作完成
+      // 不等待完成，避免阻塞断开连接流程
+      WKDBHelper.shared.close().catchError((e) {
+        Logs.error('关闭数据库时出错: $e');
       });
     }
 

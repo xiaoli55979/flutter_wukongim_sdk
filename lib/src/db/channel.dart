@@ -11,15 +11,29 @@ class ChannelDB {
 
   Future<WKChannel?> query(String channelID, int channelType) async {
     WKChannel? channel;
-    if (WKDBHelper.shared.getDB() == null) {
+    // 检查数据库是否可用
+    if (!WKDBHelper.shared.isDatabaseAvailable) {
       return channel;
     }
-    List<Map<String, Object?>> list = await WKDBHelper.shared.getDB()!.query(
-        WKDBConst.tableChannel,
-        where: "channel_id=? and channel_type=?",
-        whereArgs: [channelID, channelType]);
-    if (list.isNotEmpty) {
-      channel = WKDBConst.serializeChannel(list[0]);
+    Database? db = WKDBHelper.shared.getDB();
+    if (db == null) {
+      return channel;
+    }
+    try {
+      List<Map<String, Object?>> list = await db.query(
+          WKDBConst.tableChannel,
+          where: "channel_id=? and channel_type=?",
+          whereArgs: [channelID, channelType]);
+      if (list.isNotEmpty) {
+        channel = WKDBConst.serializeChannel(list[0]);
+      }
+    } catch (e) {
+      // 处理数据库关闭异常，静默返回 null
+      if (e.toString().contains('database_closed')) {
+        return null;
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return channel;
   }
@@ -35,14 +49,23 @@ class ChannelDB {
       }
     }
     if (addList.isNotEmpty) {
-      WKDBHelper.shared.getDB()!.transaction((txn) async {
-        if (addList.isNotEmpty) {
-          for (Map<String, dynamic> value in addList) {
-            txn.insert(WKDBConst.tableChannel, value,
-                conflictAlgorithm: ConflictAlgorithm.replace);
+      try {
+        await WKDBHelper.shared.getDB()!.transaction((txn) async {
+          if (addList.isNotEmpty) {
+            for (Map<String, dynamic> value in addList) {
+              txn.insert(WKDBConst.tableChannel, value,
+                  conflictAlgorithm: ConflictAlgorithm.replace);
+            }
           }
+        });
+      } catch (e) {
+        // 处理数据库关闭异常，静默返回
+        if (e.toString().contains('database_closed')) {
+          return;
         }
-      });
+        // 其他异常重新抛出
+        rethrow;
+      }
     }
   }
 
@@ -66,18 +89,27 @@ class ChannelDB {
     if (WKDBHelper.shared.getDB() == null) {
       return isExit;
     }
-    List<Map<String, Object?>> list = await WKDBHelper.shared.getDB()!.query(
-        WKDBConst.tableChannel,
-        where: "channel_id=? and channel_type=?",
-        whereArgs: [channelID, channelType]);
-    if (list.isNotEmpty) {
-      dynamic data = list[0];
-      if (data != null) {
-        String channelID = WKDBConst.readString(data, 'channel_id');
-        if (channelID != '') {
-          isExit = true;
+    try {
+      List<Map<String, Object?>> list = await WKDBHelper.shared.getDB()!.query(
+          WKDBConst.tableChannel,
+          where: "channel_id=? and channel_type=?",
+          whereArgs: [channelID, channelType]);
+      if (list.isNotEmpty) {
+        dynamic data = list[0];
+        if (data != null) {
+          String channelID = WKDBConst.readString(data, 'channel_id');
+          if (channelID != '') {
+            isExit = true;
+          }
         }
       }
+    } catch (e) {
+      // 处理数据库关闭异常，返回 false
+      if (e.toString().contains('database_closed')) {
+        return false;
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return isExit;
   }
@@ -94,46 +126,67 @@ class ChannelDB {
     if (WKDBHelper.shared.getDB() == null) {
       return list;
     }
-    List<Map<String, Object?>> results = await WKDBHelper.shared.getDB()!.query(
-        WKDBConst.tableChannel,
-        where:
-            "channel_id in (${WKDBConst.getPlaceholders(channelIDs.length)}) and channel_type=?",
-        whereArgs: args);
-    if (results.isNotEmpty) {
-      for (Map<String, Object?> data in results) {
-        list.add(WKDBConst.serializeChannel(data));
+    try {
+      List<Map<String, Object?>> results = await WKDBHelper.shared.getDB()!.query(
+          WKDBConst.tableChannel,
+          where:
+              "channel_id in (${WKDBConst.getPlaceholders(channelIDs.length)}) and channel_type=?",
+          whereArgs: args);
+      if (results.isNotEmpty) {
+        for (Map<String, Object?> data in results) {
+          list.add(WKDBConst.serializeChannel(data));
+        }
       }
+    } catch (e) {
+      // 处理数据库关闭异常，返回空列表
+      if (e.toString().contains('database_closed')) {
+        return [];
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return list;
   }
 
   Future<List<WKChannelSearchResult>> search(String keyword) async {
     List<WKChannelSearchResult> list = [];
-    var sql =
-        "select t.*,cm.member_name,cm.member_remark from (select ${WKDBConst.tableChannel}.*,max(${WKDBConst.tableChannelMember}.id) mid from ${WKDBConst.tableChannel}, ${WKDBConst.tableChannelMember} where ${WKDBConst.tableChannel}.channel_id=${WKDBConst.tableChannelMember}.channel_id and ${WKDBConst.tableChannel}.channel_type=${WKDBConst.tableChannelMember}.channel_type and (${WKDBConst.tableChannel}.channel_name like ? or ${WKDBConst.tableChannel}.channel_remark like ? or ${WKDBConst.tableChannelMember}.member_name like ? or ${WKDBConst.tableChannelMember}.member_remark like ?) group by ${WKDBConst.tableChannel}.channel_id,${WKDBConst.tableChannel}.channel_type) t,${WKDBConst.tableChannelMember} cm where t.channel_id=cm.channel_id and t.channel_type=cm.channel_type and t.mid=cm.id";
-    List<Map<String, Object?>> results = await WKDBHelper.shared
-        .getDB()!
-        .rawQuery(
-            sql, ['%$keyword%', '%$keyword%', '%$keyword%', '%$keyword%']);
-    for (Map<String, Object?> data in results) {
-      var memberName = WKDBConst.readString(data, 'member_name');
-      var memberRemark = WKDBConst.readString(data, 'member_remark');
-      var channel = WKDBConst.serializeChannel(data);
-      var result = WKChannelSearchResult();
-      result.channel = channel;
-      if (memberRemark != '') {
-        if (memberRemark.toUpperCase() == keyword.toUpperCase()) {
-          result.containMemberName = memberRemark;
-        }
-      }
-      if (result.containMemberName == '') {
-        if (memberName != '') {
-          if (memberName.toUpperCase() == keyword.toUpperCase()) {
-            result.containMemberName = memberName;
+    if (WKDBHelper.shared.getDB() == null) {
+      return list;
+    }
+    try {
+      var sql =
+          "select t.*,cm.member_name,cm.member_remark from (select ${WKDBConst.tableChannel}.*,max(${WKDBConst.tableChannelMember}.id) mid from ${WKDBConst.tableChannel}, ${WKDBConst.tableChannelMember} where ${WKDBConst.tableChannel}.channel_id=${WKDBConst.tableChannelMember}.channel_id and ${WKDBConst.tableChannel}.channel_type=${WKDBConst.tableChannelMember}.channel_type and (${WKDBConst.tableChannel}.channel_name like ? or ${WKDBConst.tableChannel}.channel_remark like ? or ${WKDBConst.tableChannelMember}.member_name like ? or ${WKDBConst.tableChannelMember}.member_remark like ?) group by ${WKDBConst.tableChannel}.channel_id,${WKDBConst.tableChannel}.channel_type) t,${WKDBConst.tableChannelMember} cm where t.channel_id=cm.channel_id and t.channel_type=cm.channel_type and t.mid=cm.id";
+      List<Map<String, Object?>> results = await WKDBHelper.shared
+          .getDB()!
+          .rawQuery(
+              sql, ['%$keyword%', '%$keyword%', '%$keyword%', '%$keyword%']);
+      for (Map<String, Object?> data in results) {
+        var memberName = WKDBConst.readString(data, 'member_name');
+        var memberRemark = WKDBConst.readString(data, 'member_remark');
+        var channel = WKDBConst.serializeChannel(data);
+        var result = WKChannelSearchResult();
+        result.channel = channel;
+        if (memberRemark != '') {
+          if (memberRemark.toUpperCase() == keyword.toUpperCase()) {
+            result.containMemberName = memberRemark;
           }
         }
+        if (result.containMemberName == '') {
+          if (memberName != '') {
+            if (memberName.toUpperCase() == keyword.toUpperCase()) {
+              result.containMemberName = memberName;
+            }
+          }
+        }
+        list.add(result);
       }
-      list.add(result);
+    } catch (e) {
+      // 处理数据库关闭异常，返回空列表
+      if (e.toString().contains('database_closed')) {
+        return [];
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return list;
   }
@@ -141,29 +194,53 @@ class ChannelDB {
   Future<List<WKChannel>> queryWithFollowAndStatus(
       int channelType, int follow, int status) async {
     List<WKChannel> list = [];
-    var sql =
-        "select * from ${WKDBConst.tableChannel} where channel_type=? and follow=? and status=? and is_deleted=0";
-    List<Map<String, Object?>> results = await WKDBHelper.shared
-        .getDB()!
-        .rawQuery(sql, [channelType, follow, status]);
-    for (Map<String, Object?> data in results) {
-      var channel = WKDBConst.serializeChannel(data);
-      list.add(channel);
+    if (WKDBHelper.shared.getDB() == null) {
+      return list;
+    }
+    try {
+      var sql =
+          "select * from ${WKDBConst.tableChannel} where channel_type=? and follow=? and status=? and is_deleted=0";
+      List<Map<String, Object?>> results = await WKDBHelper.shared
+          .getDB()!
+          .rawQuery(sql, [channelType, follow, status]);
+      for (Map<String, Object?> data in results) {
+        var channel = WKDBConst.serializeChannel(data);
+        list.add(channel);
+      }
+    } catch (e) {
+      // 处理数据库关闭异常，返回空列表
+      if (e.toString().contains('database_closed')) {
+        return [];
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return list;
   }
 
   Future<List<WKChannel>> queryWithMuted() async {
     List<WKChannel> list = [];
-    var sql = "select * from ${WKDBConst.tableChannel} where mute=1";
-    List<Map<String, Object?>>? results =
-        await WKDBHelper.shared.getDB()?.rawQuery(sql);
-    if (results == null || results.isEmpty) {
+    if (WKDBHelper.shared.getDB() == null) {
       return list;
     }
-    for (Map<String, Object?> data in results) {
-      var channel = WKDBConst.serializeChannel(data);
-      list.add(channel);
+    try {
+      var sql = "select * from ${WKDBConst.tableChannel} where mute=1";
+      List<Map<String, Object?>>? results =
+          await WKDBHelper.shared.getDB()?.rawQuery(sql);
+      if (results == null || results.isEmpty) {
+        return list;
+      }
+      for (Map<String, Object?> data in results) {
+        var channel = WKDBConst.serializeChannel(data);
+        list.add(channel);
+      }
+    } catch (e) {
+      // 处理数据库关闭异常，返回空列表
+      if (e.toString().contains('database_closed')) {
+        return [];
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return list;
   }
@@ -171,14 +248,26 @@ class ChannelDB {
   Future<List<WKChannel>> searchWithChannelTypeAndFollow(
       String keyword, int channelType, int follow) async {
     List<WKChannel> list = [];
-    var sql =
-        "select * from ${WKDBConst.tableChannel} where (channel_name LIKE ? or channel_remark LIKE ?) and channel_type=? and follow=?";
-    List<Map<String, Object?>> results = await WKDBHelper.shared
-        .getDB()!
-        .rawQuery(sql, ['%$keyword%', '%$keyword%', channelType, follow]);
-    for (Map<String, Object?> data in results) {
-      var channel = WKDBConst.serializeChannel(data);
-      list.add(channel);
+    if (WKDBHelper.shared.getDB() == null) {
+      return list;
+    }
+    try {
+      var sql =
+          "select * from ${WKDBConst.tableChannel} where (channel_name LIKE ? or channel_remark LIKE ?) and channel_type=? and follow=?";
+      List<Map<String, Object?>> results = await WKDBHelper.shared
+          .getDB()!
+          .rawQuery(sql, ['%$keyword%', '%$keyword%', channelType, follow]);
+      for (Map<String, Object?> data in results) {
+        var channel = WKDBConst.serializeChannel(data);
+        list.add(channel);
+      }
+    } catch (e) {
+      // 处理数据库关闭异常，返回空列表
+      if (e.toString().contains('database_closed')) {
+        return [];
+      }
+      // 其他异常重新抛出
+      rethrow;
     }
     return list;
   }
